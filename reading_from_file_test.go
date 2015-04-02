@@ -47,88 +47,39 @@ var code_404 string = "SIP/2.0 404 Not Found\r\n" +
 	"k: replaces, timer\r\n" +
 	"Accept: application/sdp\r\n" +
 	"l: 0\r\n" +
-	"\r\n"
-
-var my_200_OK string = "SIP/2.0 200 OK\r\n" +
-	"Via: SIP/2.0/UDP 10.100.100.123:7648;branch=z9hG4bK-d8754z-782db835a0f52820-1---d8754z-;received=83.69.212.78;rport=16798\r\n" +
-	"Call-ID: OTlhNGZlZDE5ZmYzOWFlZGQ3MGEyOWM4YTY0ZDVjMzc\r\n" +
-	"From: \"254-mastertel\"<sip:254-mastertel@mte.master-office.net>;tag=44ac1757\r\n" +
-	"To: \"84957870777\"<sip:84957870777@89.106.175.198>;tag=as6d510d85\r\n" +
-	"CSeq: 2 INVITE\r\n" +
-	"Allow: INVITE,ACK,CANCEL,OPTIONS,BYE,REFER,SUBSCRIBE,NOTIFY,INFO,PUBLISH,UPDATE\r\n" +
-	"Server: Master-office\r\n" +
-	"Supported: replaces,timer\r\n" +
-	"Contact: <sip:84957870777@89.106.175.198:5060;user=phone>\r\n" +
-	"Content-Length: 263\r\n" +
-	"Content-Type: application/sdp\r\n" +
-	"\r\n" +
-	"v=0\r\n" +
-	"o=root 795608413 795608413 IN IP4 89.106.175.198\r\n" +
-	"s=Asterisk PBX 1.8.26.0\r\n" +
-	"c=IN IP4 89.106.175.198\r\n" +
-	"t=0 0\r\n" +
-	"m=audio 46288 RTP/AVP 8 0 101\r\n" +
-	"a=rtpmap:8 PCMA/8000\r\n" +
-	"a=rtpmap:0 PCMU/8000\r\n" +
-	"a=rtpmap:101 telephone-event/8000\r\n" +
-	"a=fmtp:101 0-16\r\n" +
-	"a=ptime:20\r\n" +
-	"a=sendrecv\r\n" +
-	"\r\n"
+	"\r\n\r\n"
 
 func Test_request(t *testing.T) {
 	//if sip_message, ok := Get_sip_msg(request); ok {
-	//if sip_message, ok := Get_sip_msg(code_404); ok {
-	if sip_message, ok := Get_sip_msg(my_200_OK); ok {
+	if sip_message, ok := Get_sip_msg(code_404); ok {
 		//fmt.Println("request line is ", sip_message.Headers[0])
 		fmt.Println("type is ", sip_message.Sip_type)
 		fmt.Println("method or code is", sip_message.Method_or_Code)
 		fmt.Println("call_id is ", sip_message.Call_id)
-		fmt.Println("from", sip_message.Headers["From:"])    //но помни что возвращает тут слайс
-		fmt.Println("to", sip_message.Headers["To:"])        //но помни что возвращает тут слайс
-		fmt.Println("CSeq", sip_message.Headers["CSeq:"][1]) //а тут уже строку
+		fmt.Println("from", sip_message.Headers["From"])
+		fmt.Println("to", sip_message.Headers["To"])
+		fmt.Println("CSeq", sip_message.Headers["CSeq"])
 		fmt.Println(sip_message.Get_CSeq())
+
+	} else {
+		fmt.Println("this is not sip")
 	}
 }
 
 func Test_response(t *testing.T) {
 	if sip_message, ok := Get_sip_msg(responce); ok {
 		fmt.Println("type is ", sip_message.Sip_type)
+		fmt.Println("status_line:", sip_message.First_line)
 		fmt.Println("method or code is", sip_message.Method_or_Code)
 		fmt.Println("call_id is ", sip_message.Call_id)
-		fmt.Println("CSeq", sip_message.Headers["CSeq:"][1]) //а тут уже строку
+		fmt.Println("from", sip_message.Headers["From"]) //но помни что возвращает тут слайс
+		fmt.Println(sip_message.Get_from_host())
+		fmt.Println("to", sip_message.Headers["To"])     //но помни что возвращает тут слайс
+		fmt.Println("CSeq", sip_message.Headers["CSeq"]) //а тут уже строку
 		fmt.Println(sip_message.Get_CSeq())
 	}
 }
 
-func Test_readingfile(t *testing.T) {
-	if f, err := os.Open("with_reg.pcap"); err == nil {
-		r := pcap.NewReader(f)
-		r.ParseHeader()
-		for i := 0; ; i++ {
-			p, err := r.ReadPacket()
-			if err != nil {
-				fmt.Println(err)
-				break // пакет не читается
-			}
-			may_be_sip := string(p.Data.Payload())
-			real_sip := may_be_sip[42:] //отрезаем до эмпирически 42
-			if s_msg, ok := Get_sip_msg(real_sip); ok {
-				t.Log("this packet ok")
-				//fmt.Println("call_id :", s_msg.Call_id)
-				fmt.Println("method or code:", s_msg.Method_or_Code)
-			} else {
-				t.Error("this is not sip packet N: ", i)
-			}
-		}
-		f.Close()
-	} else {
-		fmt.Println("cant open file")
-		t.Error("can't open file", err)
-	}
-}
-
-/*
 func Test_readingbfile(t *testing.T) {
 	if f, err := os.Open("big_sip.pcap"); err == nil {
 		r := pcap.NewReader(f)
@@ -143,10 +94,11 @@ func Test_readingbfile(t *testing.T) {
 			real_sip := may_be_sip[42:] //отрезаем до эмпирически 42
 			if s_msg, ok := Get_sip_msg(real_sip); ok {
 				//t.Log("this packet ok", i)
-				fmt.Println("call_id :", s_msg.Call_id)
+				//fmt.Println("call_id :", s_msg.Call_id)
+				fmt.Println("fh:", s_msg.Get_from_host(), "n:", i)
 			} else {
 				//t.Error("this is not sip packet N: ", i)
-				fmt.Println("this is not sip packet N: ", i)
+				//fmt.Println("this is not sip packet N: ", i)
 			}
 		}
 		f.Close()
@@ -155,4 +107,3 @@ func Test_readingbfile(t *testing.T) {
 		//t.Error("can't open file", err)
 	}
 }
-*/
